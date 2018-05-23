@@ -15,37 +15,49 @@ class Client(object):
         self.duration = duration
         self.wait_time = wait_time
         self.timeout_error = False
+        self.consumed_event = env.event()
+        self.refilled_event = env.event()
+        self.received_event = env.event()
+
     def run(self):
         #start-up
         for i in range(self.buf_cap):
-            req = self.request(quality)
+            req = self.request(0)
             self.network.send(self.server, req)
-            t0 = self.env.now()
-            yield
+            yield self.received_event
         #steady state
         self.env.process(self.play())
-        while self.duration > 0:
+        # TODO: check that the buffer has room
+        self.quality = 0
+        while self.duration > self.buf_size * self.S:
+            if self.buf_size == self.buf_cap:
+                yield self.consumed_event
+            self.t0 = self.env.now()
+            req = self.request(self.quality)
+            self.network.send(self.server, req)
+            yield self.received_event
+
+    def request(self, quality):
+        return quality
+
+    def incoming_packet(self):
+        if self.incoming_data == "ERROR":
+            if self.quality > 0:
+                self.quality -= 1
+                self.received_event.succeed()
+        else:
+            self.buf_size += 1
             t1 = self.env.now()
-            if t1-t0 < self.S:
+            if t1-self.t0 < self.S:
                 if self.quality < self.max_quality:
                     self.quality += 1
             else:
                 if self.quality > 0:
                     self.quality -= 1
-            if self.duration > self.buf_size * self.S:
-                req = self.request(self.quality)
-                self.network.send(self.server, req)
-
-    def request(self, quality):
-        req = quality
-
-    def incoming_packet(self, data):
-        if data == "ERROR":
-            pass
-        else:
-            self.buf_size += 1
-            self.timeout_error = False
-            self.run()
+            if self.timeout_error:
+                self.timeout_error = False
+                self.refilled_event.succeed()
+        self.received_event.succeed()
 
     def play(self):
         while self.duration > 0:
@@ -53,10 +65,15 @@ class Client(object):
                 yield self.env.timeout(self.S)
                 self.buf_size -= 1
                 self.duration -= self.S
+                if  self.buf_size == self.buf_cap-1:
+                    self.consumed_event.succeed()
             else:
                 self.timeout_error = True
-                yield self.env.timeout(self.wait_time)
+                yield self.env.any_of([timeout(self.wait_time), self.refilled_event])
                 if self.timeout_error:
                     break
-        
-        print("video finito")
+        if self.timeout_error:
+            print("Churning")
+            self.duration = 0
+            return
+        print("video is over")

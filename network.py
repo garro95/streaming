@@ -12,4 +12,5 @@ class Network(object):
 
     def send(self, receiver, data):
         yield self.env.timeout(self.RTT/2)
-        self.env.process(receiver.incoming_packet(), data)
+        receiver.incoming_data=data
+        self.env.process(receiver.incoming_packet)
