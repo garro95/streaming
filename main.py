@@ -11,10 +11,15 @@ from server import Server
 S = 5 # Duration of the video contained in a packet
 K = 12 # Number of packets in the client buffer
 RTT = 5
+OB = 10000 # Mb Output buffer capacity of the server
 
 def main():
-    network = Network(RTT)
-    client = Client(S, K)
+    env = simpy.Environment()
+    network = Network(RTT, env)
+    server = Server(network, S, OB, env)
+    client = Client(S, K, server, network, env, 4, 2000, 10)
+    env.process(client.run())
+    env.run()
     
 if __name__ == '__main__':
     main()
