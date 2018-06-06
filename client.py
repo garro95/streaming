@@ -26,9 +26,11 @@ class Client(object):
         #start-up
         print("Buffering...")
         for i in range(self.buf_cap):
-            print("cose")
+            print("cose ", self.env.now)
             req = self.request(0)
-            self.env.process(self.network.send(self, self.server, Data(0, req)))
+            self.t0 = self.env.now
+            yield self.env.process(self.network.send(self, self.server, Data(0, req)))
+            self.received_event = self.env.event()
             yield self.received_event
         #steady state
         self.env.process(self.play())
@@ -37,23 +39,24 @@ class Client(object):
         while self.duration > self.buf_size * self.S:
             if self.buf_size == self.buf_cap:
                 yield self.consumed_event
-            self.t0 = self.env.now()
+            self.t0 = self.env.now
             req = self.request(self.quality)
-            self.network.send(self.server, self.server, Data(0, req))
+            yield self.env.process(self.network.send(self, self.server, Data(0, req)))
+            self.received_event = self.env.event()
             yield self.received_event
 
     def request(self, quality):
         return quality
 
     def incoming_packet(self):
-        print("Packet received from server")
+        print("Packet received from server: ", self.env.now)
         if self.incoming_data.content == "ERROR":
             if self.quality > 0:
                 self.quality -= 1
                 self.received_event.succeed()
         else:
             self.buf_size += 1
-            t1 = self.env.now()
+            t1 = self.env.now
             if t1-self.t0 < self.S:
                 if self.quality < self.max_quality:
                     self.quality += 1
@@ -64,6 +67,7 @@ class Client(object):
                 self.timeout_error = False
                 self.refilled_event.succeed()
         self.received_event.succeed()
+        yield self.env.timeout(0)
 
     def play(self):
         print("Playing back")
@@ -76,6 +80,7 @@ class Client(object):
                     self.consumed_event.succeed()
             else:
                 self.timeout_error = True
+                self.refilled_event = self.env.event()
                 yield self.env.any_of([self.env.timeout(self.wait_time), self.refilled_event])
                 if self.timeout_error:
                     break

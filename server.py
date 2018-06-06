@@ -20,17 +20,17 @@ class Server(object):
         
     def incoming_packet(self):
         # TODO: consider that the queue should not overflow
-        print("packet received from client")
+        print("packet received from client: ", self.incoming_data)
         quality = self.incoming_data.content
         if self.outbuf_size + self.quality_levels[quality] > self.outbuf_cap:
-            self.env.process(self.network.send(self, self.sender, Data(0, "ERROR")))
+            yield self.env.process(self.network.send(self, self.sender, Data(0, "ERROR")))
         else:
-            self.env.process(self.process(self.sender, quality))
+            yield self.env.process(self.process(self.sender, quality))
 
     def process(self, sender, quality):
         self.outbuf_size += self.quality_levels[quality]
         with self.network_interface.request() as req:
             yield req
-            self.env.process(self.network.send(self, sender, Data(self.quality_levels[quality], "")))
+            yield self.env.process(self.network.send(self, sender, Data(self.quality_levels[quality], "")))
         self.outbuf_size -= self.quality_levels[quality]
         

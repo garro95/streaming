@@ -17,7 +17,7 @@ def main():
     env = simpy.Environment()
     network = Network(RTT, env)
     server = Server(network, S, OB, env)
-    client = Client(S, K, server, network, env, 4, 2000, 10)
+    client = Client(S, K, server, network, env, 4, 2000, 1)
     env.process(client.run())
     env.run()
     
