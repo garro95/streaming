@@ -1,6 +1,3 @@
-import simpy;
-import random;
-
 class Network(object):
     """Documentation for Network
 
@@ -11,13 +8,14 @@ class Network(object):
         self.env = env
 
     def send(self, sender, receiver, data):
-        print("sending packet from ", sender, " to ", receiver)
+        # print("sending packet from ", sender, " to ", receiver)
         yield self.env.timeout(self.RTT/2)
         yield self.env.timeout(data.size/sender.speed)
         yield self.env.timeout(data.size/receiver.speed)
-        receiver.incoming_data=data
+        receiver.incoming_data = data
         receiver.sender = sender
         self.env.process(receiver.incoming_packet())
+
 
 class Data(object):
     """Documentation for Data
@@ -27,5 +25,6 @@ class Data(object):
         super(Data, self).__init__()
         self.size = size
         self.content = content
+
     def __str__(self):
         return "size: " + str(self.size) + " content: " + str(self.content)
