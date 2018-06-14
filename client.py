@@ -6,9 +6,9 @@ class Client(object):
 
     """
     def __init__(self, S, K, Server, Network, environment,
-                 max_quality, duration, wait_time):
+                 max_quality, speed, duration, wait_time):
         super(Client, self).__init__()
-        self.speed = 1.5  # Mbps
+        self.speed = speed  # Mbps
         self.S = S
         self.buf_cap = K  # ...acity
         self.server = Server
