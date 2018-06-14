@@ -1,0 +1,27 @@
+\documentclass[10pt,a4paper,oneside]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{layaureo}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\author{Gianmarco Garrisi \and Francesca Pacella \and Edoardo Pristeri}
+\title{Simulation of a streaming system}
+\begin{document}
+	\maketitle
+	\section{A streaming service}
+	In this report we will discuss the results of some simulation about a streaming service.
+	
+	The streaming service is composed of three types of components:
+	\begin{description}
+		\item[A server] that process the requests and send back chunks of video.
+		\item[The network] that introduces a delay due to the Round Trip Time and the access speed of server and client
+		\item[Some clients] that contains the logic of the system.
+	\end{description}
+	
+	This is pretty much how things work in practice: the server provides the video on requests and the client implements all the logic about the adaptation to the network conditions. From some research we have done before starting the implementation, it resulted that, to keep the server even simpler, some services like Netflix\texttrademark, make the client request chunks of different quality to different servers identified by different IP addresses.
+	
+	
+	
+	
+\end{document}
