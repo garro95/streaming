@@ -26,9 +26,8 @@ class Client(object):
 
     def run(self):
         # start-up
-        print("Buffering...")
+        # print("Buffering...")
         for i in range(self.buf_cap):
-            # print("cose ", self.env.now)
             req = self.request(0)
             self.t0 = self.env.now
             yield self.env.process(self.network.send(self, self.server,
@@ -40,8 +39,10 @@ class Client(object):
         # TODO: check that the buffer has room
         self.quality = 0
         while self.duration > self.buf_size * self.S:
+            self.consumed_event = self.env.event()
             if self.buf_size == self.buf_cap:
                 yield self.consumed_event
+                self.consumed_event = self.env.event()
             self.t0 = self.env.now
             req = self.request(self.quality)
             yield self.env.process(self.network.send(self, self.server,
@@ -53,7 +54,7 @@ class Client(object):
         return quality
 
     def incoming_packet(self):
-        # print("Packet received from server: ", self.env.now)
+        print(self, ";", self.incoming_data.size)
         if self.incoming_data.content == "ERROR":
             if self.quality > 0:
                 self.quality -= 1
@@ -80,7 +81,7 @@ class Client(object):
                 yield self.env.timeout(self.S)
                 self.buf_size -= 1
                 self.duration -= self.S
-                if self.buf_size == self.buf_cap-1:
+                if self.buf_size == self.buf_cap - 1:
                     self.consumed_event.succeed()
             else:
                 self.timeout_error = True
