@@ -67,7 +67,7 @@ class Client(object):
     def incoming_packet(self, sender, data):
         self.sender = sender
         self.data = data
-        #print(self, ";", self.incoming_data.size)
+        # print(self, ";", self.incoming_data.size)
         self.time_response = self.env.now
         if self.data.content == "ERROR":
             if self.quality > 0:
@@ -87,16 +87,15 @@ class Client(object):
         yield self.env.timeout(0)
 
     def calcSpeed(self, dataSize, time, level):
-        dlspeed = dataSize/time
-        if dlspeed > self.quality_levels[level]:
-            #print("True, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
+        if time > self.S:
+            # print("True, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
             return True
         else:
-            #print("False, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
+            # print("False, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
             return False
 
     def play(self):
-        #print("Playing back")
+        # print("Playing back")
         while self.duration > 0:
             if self.buf_size > 0:
                 self.buffer_a.append(self.buf_size)
