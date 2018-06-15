@@ -8,23 +8,25 @@ class Network(object):
         self.env = env
 
     def send(self, sender, receiver, data):
-        # print("sending packet from ", sender, " to ", receiver)
-        yield self.env.timeout(self.RTT/2)
         yield self.env.timeout(data.size/sender.speed)
+        self.env.process(self.send1(sender, receiver, data))
+
+    def send1(self, sender, receiver, data):
+        yield self.env.timeout(self.RTT/2)
         yield self.env.timeout(data.size/receiver.speed)
-        receiver.incoming_data = data
-        receiver.sender = sender
-        self.env.process(receiver.incoming_packet())
+        self.env.process(receiver.incoming_packet(sender, data))
 
 
 class Data(object):
     """Documentation for Data
 
     """
-    def __init__(self, size, content):
+    def __init__(self, size, content, timestamp, level = 0):
         super(Data, self).__init__()
         self.size = size
         self.content = content
+        self.timestamp = timestamp
+        self.level = level
 
     def __str__(self):
         return "size: " + str(self.size) + " content: " + str(self.content)

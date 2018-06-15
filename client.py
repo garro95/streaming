@@ -1,4 +1,5 @@
 from network import Data
+import matplotlib.pyplot as plt
 
 
 class Client(object):
@@ -6,8 +7,10 @@ class Client(object):
 
     """
     def __init__(self, S, K, Server, Network, environment,
-                 max_quality, speed, duration, wait_time):
+                 max_quality, speed, duration, wait_time, id):
         super(Client, self).__init__()
+        self.quality_levels = [1.5, 4.0, 7.5, 12, 68]
+        self.id = id
         self.speed = speed  # Mbps
         self.S = S
         self.buf_cap = K  # ...acity
@@ -17,52 +20,61 @@ class Client(object):
         self.quality = 0
         self.env = environment
         self.max_quality = max_quality
+        self.length = duration
         self.duration = duration
         self.wait_time = wait_time
         self.timeout_error = False
         self.consumed_event = self.env.event()
         self.refilled_event = self.env.event()
         self.received_event = self.env.event()
+        self.time_response = 0
+        self.dl_speed = 0
+        self.time_a = []
+        self.buffer_a = []
+        self.quality_a = []
 
     def run(self):
         # start-up
         # print("Buffering...")
-        for i in range(self.buf_cap):
+        self.server.nclientsN += 1
+        self.server.nclients.append(self.server.nclientsN)
+        self.server.time_clients.append(self.env.now)
+        while self.buf_size < self.buf_cap:
+            self.buffer_a.append(self.buf_size)
+            self.time_a.append(self.env.now)
+            self.quality_a.append(0)
             req = self.request(0)
-            self.t0 = self.env.now
-            yield self.env.process(self.network.send(self, self.server,
-                                                     Data(0, req)))
+            yield self.env.process(self.network.send(self, self.server, req))
             self.received_event = self.env.event()
             yield self.received_event
         # steady state
         self.env.process(self.play())
-        # TODO: check that the buffer has room
         self.quality = 0
         while self.duration > self.buf_size * self.S:
             self.consumed_event = self.env.event()
             if self.buf_size == self.buf_cap:
                 yield self.consumed_event
                 self.consumed_event = self.env.event()
-            self.t0 = self.env.now
             req = self.request(self.quality)
             yield self.env.process(self.network.send(self, self.server,
-                                                     Data(0, req)))
+                                                     req))
             self.received_event = self.env.event()
             yield self.received_event
 
     def request(self, quality):
-        return quality
+        return Data(0, quality, self.env.now)
 
-    def incoming_packet(self):
-        print(self, ";", self.incoming_data.size)
-        if self.incoming_data.content == "ERROR":
+    def incoming_packet(self, sender, data):
+        self.sender = sender
+        self.data = data
+        #print(self, ";", self.incoming_data.size)
+        self.time_response = self.env.now
+        if self.data.content == "ERROR":
             if self.quality > 0:
                 self.quality -= 1
-                self.received_event.succeed()
         else:
             self.buf_size += 1
-            t1 = self.env.now
-            if t1-self.t0 < self.S:
+            if self.calcSpeed(self.data.size, self.time_response - self.data.timestamp, self.data.level):
                 if self.quality < self.max_quality:
                     self.quality += 1
             else:
@@ -74,16 +86,31 @@ class Client(object):
         self.received_event.succeed()
         yield self.env.timeout(0)
 
+    def calcSpeed(self, dataSize, time, level):
+        dlspeed = dataSize/time
+        if dlspeed > self.quality_levels[level]:
+            #print("True, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
+            return True
+        else:
+            #print("False, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
+            return False
+
     def play(self):
-        print("Playing back")
+        #print("Playing back")
         while self.duration > 0:
             if self.buf_size > 0:
+                self.buffer_a.append(self.buf_size)
+                self.time_a.append(self.env.now)
+                self.quality_a.append(self.quality)
                 yield self.env.timeout(self.S)
                 self.buf_size -= 1
                 self.duration -= self.S
                 if self.buf_size == self.buf_cap - 1:
                     self.consumed_event.succeed()
             else:
+                self.buffer_a.append(self.buf_size)
+                self.time_a.append(self.env.now)
+                self.quality_a.append(self.quality)
                 self.timeout_error = True
                 self.refilled_event = self.env.event()
                 yield self.env.any_of([self.env.timeout(self.wait_time),
@@ -91,7 +118,28 @@ class Client(object):
                 if self.timeout_error:
                     break
         if self.timeout_error:
-            print("Churning")
+            self.buffer_a.append(self.buf_size)
+            self.time_a.append(self.env.now)
+            self.quality_a.append(0)
+            print("Churning video long ", self.length , " with ", self.duration, " left, at ", self.env.now)
             self.duration = 0
+            self.server.nclientsN -= 1
+            self.server.nclients.append(self.server.nclientsN)
+            self.server.time_clients.append(self.env.now)
+            # plt.figure()
+            # plt.plot(self.time_a, self.quality_a)
+            # plt.plot(self.time_a, self.buffer_a)
+            # plt.show()
             return
-        print("video is over")
+        self.buffer_a.append(self.buf_size)
+        self.time_a.append(self.env.now)
+        self.quality_a.append(0)
+        print("Video long ", self.length, " is over at ", self.env.now)
+        self.server.nclientsN -= 1
+        self.server.nclients.append(self.server.nclientsN)
+        self.server.time_clients.append(self.env.now)
+        # plt.figure()
+        # plt.plot(self.time_a, self.quality_a)
+        # plt.plot(self.time_a, self.buffer_a)
+        # plt.show()
+#
