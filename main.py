@@ -17,12 +17,12 @@ RTT = 0.5
 OB = 500  # Mb Output buffer capacity of the server
 MAX_QUALITY = 5
 INTER_ARRIVAL_TIME = 1  # Seconds
-DURATION = 1000  # Seconds
+DURATION = 10  # Seconds
 WAIT_TIME = 5  # Seconds
 WAIT_TIME_START = S*K
 SERV_SPEED = 10000  # Mbps
 CLI_SPEED = 3  # Mbps
-RUN_TIME = 10000
+RUN_TIME = 100
 SEED = 12
 
 
@@ -156,10 +156,10 @@ def main():
         to_print.append(env.churns)
     if args.output_file is not None:
         of = open(args.output_file, "w")
-        of.write(to_print)
+        of.write(str(to_print))
     elif args.append_to_file is not None:
         of = open(args.append_to_file, "a")
-        of.write(to_print)
+        of.write(str(to_print))
     else:
         print(to_print)
 
