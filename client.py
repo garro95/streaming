@@ -123,7 +123,8 @@ class Client(object):
             self.buffer_a.append(self.buf_size)
             self.time_a.append(self.env.now)
             self.quality_a.append(0)
-            print("Churning video long ", self.length , " with ", self.duration, " left, at ", self.env.now)
+            self.env.churns += 1
+            # print("Churning video long ", self.length , " with ", self.duration, " left, at ", self.env.now)
             self.duration = 0
             self.server.nclientsN -= 1
             self.server.nclients.append(self.server.nclientsN)
@@ -133,7 +134,8 @@ class Client(object):
         self.buffer_a.append(self.buf_size)
         self.time_a.append(self.env.now)
         self.quality_a.append(0)
-        print("Video long ", self.length, " is over at ", self.env.now)
+        self.env.success += 1
+        # print("Video long ", self.length, " is over at ", self.env.now)
         self.server.nclientsN -= 1
         self.server.nclients.append(self.server.nclientsN)
         self.server.time_clients.append(self.env.now)
