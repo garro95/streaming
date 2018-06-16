@@ -11,17 +11,17 @@ from argparse import ArgumentParser
 # the player
 # REMEMBER: waiting time is related to network speed, not
 # to video to play
-S = 5  # Duration of the video contained in a packet
-K = 5  # Number of packets in the client buffer
+S = 6  # Duration of the video contained in a packet
+K = 10  # Number of packets in the client buffer
 RTT = 0.5
 OB = 500  # Mb Output buffer capacity of the server
 MAX_QUALITY = 5
-INTER_ARRIVAL_TIME = 0.0095  # Seconds
-DURATION = 100  # Seconds
+INTER_ARRIVAL_TIME = 1  # Seconds
+DURATION = 1000  # Seconds
 WAIT_TIME = 5  # Seconds
-SERV_SPEED = 15000  # Mbps
-CLI_SPEED = 70  # Mbps
-RUN_TIME = 600
+SERV_SPEED = 10000  # Mbps
+CLI_SPEED = 3  # Mbps
+RUN_TIME = 10000
 SEED = 12
 
 
@@ -154,10 +154,10 @@ def main():
     if args.print_churns:
         to_print.append(env.churns)
     if args.output_file is not None:
-        of = open(args.o, "w")
+        of = open(args.output_file, "w")
         of.write(to_print)
     elif args.append_to_file is not None:
-        of = open(args.a, "a")
+        of = open(args.append_to_file, "a")
         of.write(to_print)
     else:
         print(to_print)
