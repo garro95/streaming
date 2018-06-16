@@ -11,17 +11,17 @@ from argparse import ArgumentParser
 # the player
 # REMEMBER: waiting time is related to network speed, not
 # to video to play
-S = 6  # Duration of the video contained in a packet
-K = 20  # Number of packets in the client buffer
+S = 5  # Duration of the video contained in a packet
+K = 5  # Number of packets in the client buffer
 RTT = 0.5
-OB = 1000  # Mb Output buffer capacity of the server
-MAX_QUALITY = 4
-INTER_ARRIVAL_TIME = 10  # Seconds
-DURATION = 1000  # Seconds
-WAIT_TIME = 15  # Seconds
+OB = 500  # Mb Output buffer capacity of the server
+MAX_QUALITY = 5
+INTER_ARRIVAL_TIME = 0.0095  # Seconds
+DURATION = 100  # Seconds
+WAIT_TIME = 5  # Seconds
 SERV_SPEED = 15000  # Mbps
 CLI_SPEED = 70  # Mbps
-RUN_TIME = 5000
+RUN_TIME = 600
 SEED = 12
 
 
@@ -44,7 +44,7 @@ class ClientSpawner(object):
     def run(self, env):
         self.count = 0
         while True:
-            duration = random.normalvariate(self.duration, 200)
+            duration = random.normalvariate(self.duration, 0)
             duration -= duration % S
             wait_time = random.expovariate(1.0/self.wait_time)
             client = Client(self.S, self.K, self.server, self.network, env,

@@ -32,6 +32,7 @@ class Client(object):
         self.time_a = []
         self.buffer_a = []
         self.quality_a = []
+        self.error = False
 
     def run(self):
         # start-up
@@ -67,19 +68,23 @@ class Client(object):
     def incoming_packet(self, sender, data):
         self.sender = sender
         self.data = data
-        # print(self, ";", self.incoming_data.size)
         self.time_response = self.env.now
         if self.data.content == "ERROR":
+            self.error = True
             if self.quality > 0:
                 self.quality -= 1
         else:
             self.buf_size += 1
             if self.calcSpeed(self.data.size, self.time_response - self.data.timestamp, self.data.level):
                 if self.quality < self.max_quality:
-                    self.quality += 1
+                    if not self.error:
+                        self.quality += 1
+                    self.error = False
             else:
                 if self.quality > 0:
-                    self.quality -= 1
+                    if not self.error:
+                        self.quality -= 1
+                    self.error = False
             if self.timeout_error:
                 self.timeout_error = False
                 self.refilled_event.succeed()
@@ -88,10 +93,8 @@ class Client(object):
 
     def calcSpeed(self, dataSize, time, level):
         if time > self.S:
-            # print("True, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
             return True
         else:
-            # print("False, dl_speed = ", dlspeed, " quality = ", self.quality_levels[level])
             return False
 
     def play(self):
@@ -125,10 +128,7 @@ class Client(object):
             self.server.nclientsN -= 1
             self.server.nclients.append(self.server.nclientsN)
             self.server.time_clients.append(self.env.now)
-            # plt.figure()
-            # plt.plot(self.time_a, self.quality_a)
-            # plt.plot(self.time_a, self.buffer_a)
-            # plt.show()
+            #self.plotClient()
             return
         self.buffer_a.append(self.buf_size)
         self.time_a.append(self.env.now)
@@ -137,8 +137,12 @@ class Client(object):
         self.server.nclientsN -= 1
         self.server.nclients.append(self.server.nclientsN)
         self.server.time_clients.append(self.env.now)
-        # plt.figure()
-        # plt.plot(self.time_a, self.quality_a)
-        # plt.plot(self.time_a, self.buffer_a)
-        # plt.show()
-#
+        #self.plotClient()
+
+
+    def plotClient(self):
+        if self.env.now > 300:
+            plt.figure()
+            plt.plot(self.time_a, self.quality_a)
+            plt.plot(self.time_a, self.buffer_a)
+            plt.show()
