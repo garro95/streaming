@@ -17,12 +17,12 @@ RTT = 0.5
 OB = 500  # Mb Output buffer capacity of the server
 MAX_QUALITY = 5
 INTER_ARRIVAL_TIME = 1  # Seconds
-DURATION = 10  # Seconds
+DURATION = 100  # Seconds
 WAIT_TIME = 5  # Seconds
 WAIT_TIME_START = S*K
 SERV_SPEED = 10000  # Mbps
 CLI_SPEED = 3  # Mbps
-RUN_TIME = 100
+RUN_TIME = 1000
 SEED = 12
 
 
@@ -127,6 +127,7 @@ def main():
     random.seed(args.seed)
     env = simpy.Environment()
     env.churns = 0
+    env.churns_start = 0
     env.success = 0
     network = Network(args.rtt, env)
     server = Server(network, args.S, args.upload_speed,
@@ -154,6 +155,7 @@ def main():
         to_print.append(env.success)
     if args.print_churns:
         to_print.append(env.churns)
+        to_print.append(env.churns_start)
     if args.output_file is not None:
         of = open(args.output_file, "w")
         of.write(str(to_print))
