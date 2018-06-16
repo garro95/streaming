@@ -29,8 +29,8 @@ class ClientSpawner(object):
     """Documentation for ClientSpawner
 
     """
-    def __init__(self, inter_arrival_time, duration,
-                 wait_time, network, server, cli_speed):
+    def __init__(self, S, K, inter_arrival_time, cli_speed, duration,
+                 wait_time, network, server):
         super(ClientSpawner, self).__init__()
         self.inter_arrival_time = inter_arrival_time
         self.duration = duration
@@ -38,6 +38,8 @@ class ClientSpawner(object):
         self.network = network
         self.server = server
         self.cli_speed = cli_speed
+        self.S = S
+        self.K = K
 
     def run(self, env):
         self.count = 0
@@ -45,7 +47,7 @@ class ClientSpawner(object):
             duration = random.normalvariate(self.duration, 200)
             duration -= duration % S
             wait_time = random.expovariate(1.0/self.wait_time)
-            client = Client(S, K, self.server, self.network, env,
+            client = Client(self.S, self.K, self.server, self.network, env,
                             MAX_QUALITY, self.cli_speed, duration,
                             wait_time, self.count)
             env.process(client.run())
@@ -55,54 +57,108 @@ class ClientSpawner(object):
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("S", "-S",
+    #     -----------      PARAMETERS OF THE SIMULATION      -----------      #
+    parser.add_argument("-S",
                         help="The duration of a fragment of video, in seconds",
                         default=S, type=float)
-    parser.add_argument("K", "-k",
-                        help="The length of the client buffer, in number of fragments",
-                        default=K, type=int)
-    parser.add_argument("RTT", "--rtt", "-R",
-                        help="The round trip time between server and client, in seconds",
-                        default=RTT, type=float)
-    parser.add_argument("SEED", "--seed", "-s",
+    parser.add_argument("-k",
+                        help="The length of the client buffer, " +
+                        "in number of fragments", default=K, type=int)
+    parser.add_argument("--rtt", "-R",
+                        help="The round trip time between server " +
+                        "and client, in seconds", default=RTT, type=float)
+    parser.add_argument("--seed", "-s",
                         help="The random seed to be used for the simulation",
                         default=SEED, type=int)
-    parser.add_argument("OB", "-ob", "--output_buffer",
-                        help="The size of the output buffer at the server side, in Megabits",
-                        default=OB, type=int)
-    parser.add_argument("IAT", "-i", "--inter_arrival_time",
-                        help="Interarrival time (1 over lambda), in seconds"
+    parser.add_argument("-ob", "--output_buffer",
+                        help="The size of the output buffer at the " +
+                        "server side, in Megabits", default=OB, type=int)
+    parser.add_argument("-i", "--inter_arrival_time",
+                        help="Interarrival time (1 over lambda), in seconds",
                         default=INTER_ARRIVAL_TIME, type=float)
-    parser.add_argument("DURATION", "-d", "--duration",
+    parser.add_argument("-d", "--duration",
                         help="Mean duration of the videos, in seconds",
                         default=DURATION, type=float)
-    parser.add_argument("WAIT_TIME", "-w", "--wait_time",
-                        help="The time a customer wait with the player stuck before going away",
+    parser.add_argument("-w", "--wait_time",
+                        help="The time a customer wait with the player " +
+                        "stuck before going away",
                         default=WAIT_TIME, type=float)
-    parser.add_argument("SERV_SPEED", "-us", "--upload_speed",
-                        help="The access speed on the network channel at the server side, in Megabits per second",
+    parser.add_argument("-us", "--upload_speed",
+                        help="The access speed on the network channel at " +
+                        "the server side, in Megabits per second",
                         default=SERV_SPEED, type=int)
-    parser.add_argument("CLI_SPEED", "-ds", "--download_speed",
-                        help="The access speed on the network channel at the client side, in Megabits per second",
+    parser.add_argument("-ds", "--download_speed",
+                        help="The access speed on the network channel at " +
+                        "the client side, in Megabits per second",
                         default=CLI_SPEED, type=float)
-    parser.add_argument("RUN_TIME", "-T", "--simulation_time",
-                        help="The duration of the simulation, in simulation seconds (not real time)",
+    parser.add_argument("-T", "--simulation_time",
+                        help="The duration of the simulation, in " +
+                        "simulation seconds (not real time)",
                         default=RUN_TIME, type=int)
+    #      ---------------      OUTPUT OPTIONS      ---------------      #
+    parser.add_argument("--plot_server_buf",
+                        help="Name of the file on which the server " +
+                        "buffer size over time will be plot. If this is not " +
+                        "set, the plot will not be produced")
+    parser.add_argument("--plot_number_of_clients",
+                        help="Name of the file on which the number of " +
+                        "clients over time will be plot. If it is not set, " +
+                        "the plot will not be produced")
+    parser.add_argument("--print_total_customers", "-pt", help="Print the " +
+                        "total number of customer that has been produced by " +
+                        "the spawning process.", action="store_true")
+    parser.add_argument("--print_churns", "-pc", help="Print the " +
+                        "number of clients that left the service before the " +
+                        "end of the video", action="store_true")
+    parser.add_argument("--print_successful", "-ps", help="Print the " +
+                        "number of clients that were successfully served by " +
+                        "the system", action="store_false")
+    parser.add_argument("--prin_parameters", "-pp", help="Print the " +
+                        "simulation parameters", action="store_true")
+    parser.add_argument("-o", "--output_file", help="Specify that the " +
+                        "output should be written on the provided file " +
+                        "instead of the standard output")
+    parser.add_argument("-a", "--append_to_file", help="Specify that the " +
+                        "output should be appended on the provided file " +
+                        "instead of the standard output")
     args = parser.parse_args()
-    
-    random.seed(args.SEED)
+
+    random.seed(args.S)
     env = simpy.Environment()
-    network = Network(args.RTT, env)
-    server = Server(network, args.S, args.SERV_SPEED, args.OB, env)
-    clientspawn = ClientSpawner(args.IAT, args.DURATION, args.WAIT_TIME,
-                                network, server)
+    env.churns = 0
+    env.success = 0
+    network = Network(args.R, env)
+    server = Server(network, args.s, args.us, args.ob, env)
+    clientspawn = ClientSpawner(args.s, args.k, args.i, args.ds, args.d,
+                                args.w, network, server)
     env.process(clientspawn.run(env))
-    env.run(args.RUN_TIME)
-    plt.figure()
-    plt.plot(server.time, server.buf_sz)
-    plt.figure()
-    plt.plot(server.time_clients, server.nclients)
-    plt.show()
+    env.run(args.T)
+    if args.plot_server_buf is not None:
+        plt.figure()
+        plt.plot(server.time, server.buf_sz)
+        plt.savefig(args.plot_server_buf)
+    if args.plot_number_of_clients is not None:
+        plt.figure()
+        plt.plot(server.time_clients, server.nclients)
+        plt.savefig(args.plot_number_of_clients)
+    to_print = []
+    if args.pp:
+        to_print.append([args.S, args.s, args.k, args.i, args.ds,
+                         args.d, args.w, args.R, args.us, args.ob])
+    if args.pt:
+        to_print.append(clientspawn.count)
+    if args.ps:
+        to_print.append(env.succeess)
+    if args.pc:
+        to_print.append(env.churns)
+    if args.o is not None:
+        of = open(args.o, "w")
+        of.write(to_print)
+    elif args.a is not None:
+        of = open(args.a, "a")
+        of.write(to_print)
+    else:
+        print(to_print)
 
 
 if __name__ == '__main__':
