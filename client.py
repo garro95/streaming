@@ -7,7 +7,7 @@ class Client(object):
 
     """
     def __init__(self, S, K, Server, Network, environment,
-                 max_quality, speed, duration, wait_time, id):
+                 max_quality, speed, duration, wait_time, id, wait_time_start):
         super(Client, self).__init__()
         self.quality_levels = [1.5, 4.0, 7.5, 12, 68]
         self.id = id
@@ -22,6 +22,7 @@ class Client(object):
         self.max_quality = max_quality
         self.length = duration
         self.duration = duration
+        self.wait_time_start = wait_time_start
         self.wait_time = wait_time
         self.timeout_error = False
         self.consumed_event = self.env.event()
@@ -36,10 +37,10 @@ class Client(object):
 
     def run(self):
         # start-up
-        # print("Buffering...")
         self.server.nclientsN += 1
         self.server.nclients.append(self.server.nclientsN)
         self.server.time_clients.append(self.env.now)
+        start_buffering = self.env.now
         while self.buf_size < self.buf_cap:
             self.buffer_a.append(self.buf_size)
             self.time_a.append(self.env.now)
@@ -48,6 +49,17 @@ class Client(object):
             yield self.env.process(self.network.send(self, self.server, req))
             self.received_event = self.env.event()
             yield self.received_event
+            if self.env.now - start_buffering > self.wait_time_start:
+                self.buffer_a.append(self.buf_size)
+                self.time_a.append(self.env.now)
+                self.quality_a.append(0)
+                self.env.churns += 1
+                # print("Churning video long ", self.length , " with ", self.duration, " left, at ", self.env.now)
+                self.duration = 0
+                self.server.nclientsN -= 1
+                self.server.nclients.append(self.server.nclientsN)
+                self.server.time_clients.append(self.env.now)
+                return
         # steady state
         self.env.process(self.play())
         self.quality = 0

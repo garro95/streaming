@@ -19,6 +19,7 @@ MAX_QUALITY = 5
 INTER_ARRIVAL_TIME = 1  # Seconds
 DURATION = 1000  # Seconds
 WAIT_TIME = 5  # Seconds
+WAIT_TIME_START = S*K
 SERV_SPEED = 10000  # Mbps
 CLI_SPEED = 3  # Mbps
 RUN_TIME = 10000
@@ -49,7 +50,7 @@ class ClientSpawner(object):
             wait_time = random.expovariate(1.0/self.wait_time)
             client = Client(self.S, self.K, self.server, self.network, env,
                             MAX_QUALITY, self.cli_speed, duration,
-                            wait_time, self.count)
+                            wait_time, self.count, WAIT_TIME_START)
             env.process(client.run())
             self.count += 1
             yield env.timeout(random.expovariate(1.0/self.inter_arrival_time))
