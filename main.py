@@ -112,8 +112,8 @@ def main():
                         "end of the video", action="store_true")
     parser.add_argument("--print_successful", "-ps", help="Print the " +
                         "number of clients that were successfully served by " +
-                        "the system", action="store_false")
-    parser.add_argument("--prin_parameters", "-pp", help="Print the " +
+                        "the system", action="store_true")
+    parser.add_argument("--print_parameters", "-pp", help="Print the " +
                         "simulation parameters", action="store_true")
     parser.add_argument("-o", "--output_file", help="Specify that the " +
                         "output should be written on the provided file " +
@@ -123,16 +123,18 @@ def main():
                         "instead of the standard output")
     args = parser.parse_args()
 
-    random.seed(args.S)
+    random.seed(args.seed)
     env = simpy.Environment()
     env.churns = 0
     env.success = 0
-    network = Network(args.R, env)
-    server = Server(network, args.s, args.us, args.ob, env)
-    clientspawn = ClientSpawner(args.s, args.k, args.i, args.ds, args.d,
-                                args.w, network, server)
+    network = Network(args.rtt, env)
+    server = Server(network, args.S, args.upload_speed,
+                    args.output_buffer, env)
+    clientspawn = ClientSpawner(args.S, args.k, args.inter_arrival_time,
+                                args.download_speed, args.duration,
+                                args.wait_time, network, server)
     env.process(clientspawn.run(env))
-    env.run(args.T)
+    env.run(args.simulation_time)
     if args.plot_server_buf is not None:
         plt.figure()
         plt.plot(server.time, server.buf_sz)
@@ -142,19 +144,19 @@ def main():
         plt.plot(server.time_clients, server.nclients)
         plt.savefig(args.plot_number_of_clients)
     to_print = []
-    if args.pp:
-        to_print.append([args.S, args.s, args.k, args.i, args.ds,
-                         args.d, args.w, args.R, args.us, args.ob])
-    if args.pt:
+    if args.print_parameters:
+        to_print.append([args.seed, args.S, args.k, args.inter_arrival_time, args.download_speed,
+                         args.duration, args.wait_time, args.rtt, args.upload_speed, args.output_buffer])
+    if args.print_total_customers:
         to_print.append(clientspawn.count)
-    if args.ps:
-        to_print.append(env.succeess)
-    if args.pc:
+    if args.print_successful:
+        to_print.append(env.success)
+    if args.print_churns:
         to_print.append(env.churns)
-    if args.o is not None:
+    if args.output_file is not None:
         of = open(args.o, "w")
         of.write(to_print)
-    elif args.a is not None:
+    elif args.append_to_file is not None:
         of = open(args.a, "a")
         of.write(to_print)
     else:
