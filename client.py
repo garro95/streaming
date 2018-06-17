@@ -7,7 +7,8 @@ class Client(object):
 
     """
     def __init__(self, S, K, Server, Network, environment,
-                 max_quality, speed, duration, wait_time, id, wait_time_start):
+                 max_quality, speed, duration, wait_time, id, wait_time_start,
+                 qual_fig):
         super(Client, self).__init__()
         self.quality_levels = [1.5, 4.0, 7.5, 12, 68]
         self.id = id
@@ -24,6 +25,8 @@ class Client(object):
         self.duration = duration
         self.wait_time_start = wait_time_start
         self.wait_time = wait_time
+        self.qual_fig = qual_fig
+
         self.timeout_error = False
         self.consumed_event = self.env.event()
         self.refilled_event = self.env.event()
@@ -87,7 +90,9 @@ class Client(object):
                 self.quality -= 1
         else:
             self.buf_size += 1
-            if self.calcSpeed(self.data.size, self.time_response - self.data.timestamp, self.data.level):
+            if self.calcSpeed(self.data.size,
+                              self.time_response - self.data.timestamp,
+                              self.data.level):
                 if self.quality < self.max_quality:
                     if not self.error:
                         self.quality += 1
@@ -141,7 +146,8 @@ class Client(object):
             self.server.nclientsN -= 1
             self.server.nclients.append(self.server.nclientsN)
             self.server.time_clients.append(self.env.now)
-            #self.plotClient()
+            if self.qual_fig:
+                self.plotClient()
             return
         self.buffer_a.append(self.buf_size)
         self.time_a.append(self.env.now)
@@ -151,12 +157,10 @@ class Client(object):
         self.server.nclientsN -= 1
         self.server.nclients.append(self.server.nclientsN)
         self.server.time_clients.append(self.env.now)
-        #self.plotClient()
-
+        if self.qual_fig:
+            self.plotClient()
 
     def plotClient(self):
         if self.env.now > 300:
-            plt.figure()
             plt.plot(self.time_a, self.quality_a)
-            plt.plot(self.time_a, self.buffer_a)
-            plt.show()
+            # plt.plot(self.time_a, self.buffer_a)

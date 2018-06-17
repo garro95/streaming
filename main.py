@@ -31,7 +31,7 @@ class ClientSpawner(object):
 
     """
     def __init__(self, S, K, inter_arrival_time, cli_speed, duration,
-                 wait_time, network, server):
+                 wait_time, network, server, qual_fig):
         super(ClientSpawner, self).__init__()
         self.inter_arrival_time = inter_arrival_time
         self.duration = duration
@@ -41,6 +41,7 @@ class ClientSpawner(object):
         self.cli_speed = cli_speed
         self.S = S
         self.K = K
+        self.qual_fig = qual_fig
 
     def run(self, env):
         self.count = 0
@@ -50,7 +51,8 @@ class ClientSpawner(object):
             wait_time = random.expovariate(1.0/self.wait_time)
             client = Client(self.S, self.K, self.server, self.network, env,
                             MAX_QUALITY, self.cli_speed, duration,
-                            wait_time, self.count, WAIT_TIME_START)
+                            wait_time, self.count, WAIT_TIME_START,
+                            self.qual_fig)
             env.process(client.run())
             self.count += 1
             yield env.timeout(random.expovariate(1.0/self.inter_arrival_time))
@@ -105,6 +107,9 @@ def main():
                         help="Name of the file on which the number of " +
                         "clients over time will be plot. If it is not set, " +
                         "the plot will not be produced")
+    parser.add_argument("--plot_quality", help="Name of the file on which " +
+                        "the quality of the video over time will be plot. I" +
+                        "f it is not set, the plot will not be produced")
     parser.add_argument("--print_total_customers", "-pt", help="Print the " +
                         "total number of customer that has been produced by " +
                         "the spawning process.", action="store_true")
@@ -124,6 +129,9 @@ def main():
                         "instead of the standard output")
     args = parser.parse_args()
 
+    if args.plot_quality is not None:
+        plt.figure()
+
     random.seed(args.seed)
     env = simpy.Environment()
     env.churns = 0
@@ -134,28 +142,43 @@ def main():
                     args.output_buffer, env)
     clientspawn = ClientSpawner(args.S, args.k, args.inter_arrival_time,
                                 args.download_speed, args.duration,
-                                args.wait_time, network, server)
+                                args.wait_time, network, server,
+                                args.plot_quality is not None)
     env.process(clientspawn.run(env))
     env.run(args.simulation_time)
+
+    if args.plot_quality is not None and args.plot_quality != "":
+        plt.savefig(args.plot_quality)
     if args.plot_server_buf is not None:
         plt.figure()
         plt.plot(server.time, server.buf_sz)
-        plt.savefig(args.plot_server_buf)
+        if args.plot_server_buf != "":
+            plt.savefig(args.plot_server_buf)
     if args.plot_number_of_clients is not None:
         plt.figure()
         plt.plot(server.time_clients, server.nclients)
-        plt.savefig(args.plot_number_of_clients)
+        if args.plot_number_of_clients != "":
+            plt.savefig(args.plot_number_of_clients)
+    if (args.plot_number_of_clients is not None and
+        args.plot_number_of_clients == "") or \
+        (args.plot_server_buf is not None and
+         args.plot_server_buf == "") or \
+        (args.plot_quality is not None and
+         args.plot_quality == ""):
+        plt.show()
+
     to_print = []
     if args.print_parameters:
-        to_print.append([args.seed, args.S, args.k, args.inter_arrival_time, args.download_speed,
-                         args.duration, args.wait_time, args.rtt, args.upload_speed, args.output_buffer])
+        to_print.append([args.seed, args.S, args.k, args.inter_arrival_time,
+                         args.download_speed, args.duration, args.wait_time,
+                         args.rtt, args.upload_speed, args.output_buffer])
     if args.print_total_customers:
         to_print.append(clientspawn.count)
     if args.print_successful:
         to_print.append(env.success)
     if args.print_churns:
-        to_print.append(env.churns)
-        to_print.append(env.churns_start)
+        to_print.append([env.churns_start, env.churns])
+
     if args.output_file is not None:
         of = open(args.output_file, "w")
         of.write(str(to_print))
