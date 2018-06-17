@@ -31,9 +31,9 @@ class Client(object):
         self.consumed_event = self.env.event()
         self.refilled_event = self.env.event()
         self.received_event = self.env.event()
-        self.time_response = 0
         self.dl_speed = 0
         self.time_a = []
+        self.time_response = 0
         self.buffer_a = []
         self.quality_a = []
         self.error = False
@@ -109,7 +109,7 @@ class Client(object):
         yield self.env.timeout(0)
 
     def calcSpeed(self, dataSize, time, level):
-        if time > self.S:
+        if time < self.S:
             return True
         else:
             return False
